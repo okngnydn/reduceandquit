@@ -1,40 +1,38 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sigara Takibi</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reduce & Quit Smoking</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #fafafa;
-      color: #222;
+      background: #fdfdfd;
       padding: 20px;
       max-width: 600px;
       margin: auto;
     }
-    h1 {
-      font-size: 24px;
-    }
     #note {
-      background: #ffe6e6;
-      padding: 12px;
-      border-left: 5px solid #ff0000;
-      margin-bottom: 20px;
+      background: #ffdddd;
+      padding: 15px;
       font-weight: bold;
-    }
-    #counter {
-      font-size: 20px;
+      border-left: 5px solid red;
       margin-bottom: 20px;
+    }
+    #counter, #timer, #maxTime {
+      font-size: 18px;
+      margin: 10px 0;
     }
     button {
-      padding: 15px 20px;
+      padding: 15px;
       font-size: 18px;
       background-color: #ff4444;
       color: white;
       border: none;
-      border-radius: 5px;
+      border-radius: 8px;
       cursor: pointer;
+      margin-top: 10px;
     }
     button:active {
       background-color: #cc0000;
@@ -46,29 +44,41 @@
       border-radius: 5px;
     }
     ul {
-      list-style: none;
+      list-style-type: none;
       padding: 0;
     }
     li {
-      padding-bottom: 10px;
       border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    canvas {
+      max-width: 100%;
     }
   </style>
 </head>
 <body>
-  <h1>Sigara Takibi</h1>
-  <div id="note">BU KENDİNE VERDİĞİN SÖZ. VAZGEÇME!</div>
-  <div id="counter">Bugün içilen sigara: <span id="count">0</span></div>
-  <button id="smokeBtn">🚬 Sigara İçtim</button>
+  <h1>Reduce & Quit</h1>
+  <div id="note">You promised yourself this time. DO NOT GIVE UP.</div>
+
+  <div id="timer">Time since last cigarette: <span id="noSmokeTime">00:00:00</span></div>
+  <div id="maxTime">Longest smoke-free time: <span id="longestTime">00:00:00</span></div>
+  <div id="counter">Today's cigarette count: <span id="count">0</span></div>
+
+  <button id="smokeBtn">🚬 I Smoked</button>
+
   <div id="history">
-    <h3>Son 7 Gün</h3>
+    <h3>Past 7 Days</h3>
     <ul id="historyList"></ul>
+    <canvas id="barChart" height="200"></canvas>
   </div>
 
   <script>
-    const btn = document.getElementById("smokeBtn");
     const countEl = document.getElementById("count");
     const historyList = document.getElementById("historyList");
+    const smokeBtn = document.getElementById("smokeBtn");
+    const noSmokeEl = document.getElementById("noSmokeTime");
+    const longestEl = document.getElementById("longestTime");
+
     const today = new Date().toISOString().slice(0, 10);
 
     function getData() {
@@ -79,30 +89,110 @@
       localStorage.setItem("smoke_log", JSON.stringify(data));
     }
 
+    function getLongestSmokeFree() {
+      return parseInt(localStorage.getItem("longest_free") || "0");
+    }
+
+    function saveLongestSmokeFree(ms) {
+      localStorage.setItem("longest_free", ms.toString());
+    }
+
+    function formatTime(ms) {
+      const h = String(Math.floor(ms / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
     function updateUI() {
       const data = getData();
       const todayData = data[today] || { count: 0, times: [] };
       countEl.textContent = todayData.count;
 
-      const dates = Object.keys(data).sort().reverse().slice(0, 7);
       historyList.innerHTML = "";
-      dates.forEach(date => {
-        const item = document.createElement("li");
-        item.innerHTML = `<strong>${date}</strong>: ${data[date].count} adet<br><small>${data[date].times.join("<br>")}</small>`;
-        historyList.appendChild(item);
+      const dates = [];
+      const counts = [];
+      const now = new Date();
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const entry = data[dateStr] || { count: 0, times: [] };
+        dates.push(dateStr);
+        counts.push(entry.count);
+
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${dateStr}</strong>: ${entry.count} cigarette(s)<br><small>${entry.times.join("<br>")}</small>`;
+        historyList.appendChild(li);
+      }
+
+      renderChart(dates, counts);
+    }
+
+    function updateTimer() {
+      const lastTimeStr = localStorage.getItem("last_smoke");
+      const now = new Date();
+
+      if (!lastTimeStr) {
+        noSmokeEl.textContent = "00:00:00";
+        longestEl.textContent = formatTime(getLongestSmokeFree());
+        return;
+      }
+
+      const lastTime = new Date(lastTimeStr);
+      const diff = now - lastTime;
+      noSmokeEl.textContent = formatTime(diff);
+
+      if (diff > getLongestSmokeFree()) {
+        saveLongestSmokeFree(diff);
+        longestEl.textContent = formatTime(diff);
+      } else {
+        longestEl.textContent = formatTime(getLongestSmokeFree());
+      }
+    }
+
+    function renderChart(dates, counts) {
+      const ctx = document.getElementById('barChart').getContext('2d');
+      if (window.barChart) window.barChart.destroy();
+      window.barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Cigarettes per Day',
+            data: counts,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1
+              }
+            }
+          }
+        }
       });
     }
 
-    btn.addEventListener("click", () => {
+    smokeBtn.addEventListener("click", () => {
       const data = getData();
       if (!data[today]) data[today] = { count: 0, times: [] };
       data[today].count += 1;
-      data[today].times.push(new Date().toLocaleString());
+      const now = new Date();
+      data[today].times.push(now.toLocaleString());
       saveData(data);
+      localStorage.setItem("last_smoke", now.toISOString());
       updateUI();
+      updateTimer();
     });
 
+    setInterval(updateTimer, 1000);
     updateUI();
+    updateTimer();
   </script>
 </body>
 </html>
