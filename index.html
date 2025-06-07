@@ -33,9 +33,14 @@
       border-radius: 8px;
       cursor: pointer;
       margin-top: 10px;
+      width: 100%;
     }
     button:active {
       background-color: #cc0000;
+    }
+    #resetBtn {
+      background-color: #666;
+      margin-top: 20px;
     }
     #history {
       margin-top: 30px;
@@ -65,6 +70,7 @@
   <div id="counter">Today's cigarette count: <span id="count">0</span></div>
 
   <button id="smokeBtn">🚬 I Smoked</button>
+  <button id="resetBtn">🔁 Reset All Data</button>
 
   <div id="history">
     <h3>Past 7 Days</h3>
@@ -76,9 +82,9 @@
     const countEl = document.getElementById("count");
     const historyList = document.getElementById("historyList");
     const smokeBtn = document.getElementById("smokeBtn");
+    const resetBtn = document.getElementById("resetBtn");
     const noSmokeEl = document.getElementById("noSmokeTime");
     const longestEl = document.getElementById("longestTime");
-
     const today = new Date().toISOString().slice(0, 10);
 
     function getData() {
@@ -108,7 +114,6 @@
       const data = getData();
       const todayData = data[today] || { count: 0, times: [] };
       countEl.textContent = todayData.count;
-
       historyList.innerHTML = "";
       const dates = [];
       const counts = [];
@@ -133,13 +138,11 @@
     function updateTimer() {
       const lastTimeStr = localStorage.getItem("last_smoke");
       const now = new Date();
-
       if (!lastTimeStr) {
         noSmokeEl.textContent = "00:00:00";
         longestEl.textContent = formatTime(getLongestSmokeFree());
         return;
       }
-
       const lastTime = new Date(lastTimeStr);
       const diff = now - lastTime;
       noSmokeEl.textContent = formatTime(diff);
@@ -188,6 +191,18 @@
       localStorage.setItem("last_smoke", now.toISOString());
       updateUI();
       updateTimer();
+    });
+
+    resetBtn.addEventListener("click", () => {
+      const confirmReset = confirm("This will erase all your smoking history. Are you sure?");
+      if (confirmReset) {
+        localStorage.removeItem("smoke_log");
+        localStorage.removeItem("last_smoke");
+        localStorage.removeItem("longest_free");
+        updateUI();
+        updateTimer();
+        alert("All data has been reset.");
+      }
     });
 
     setInterval(updateTimer, 1000);
