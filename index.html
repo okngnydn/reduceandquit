@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sigara Takibi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #fafafa;
+      color: #222;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      font-size: 24px;
+    }
+    #note {
+      background: #ffe6e6;
+      padding: 12px;
+      border-left: 5px solid #ff0000;
+      margin-bottom: 20px;
+      font-weight: bold;
+    }
+    #counter {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 15px 20px;
+      font-size: 18px;
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:active {
+      background-color: #cc0000;
+    }
+    #history {
+      margin-top: 30px;
+      background: #f2f2f2;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sigara Takibi</h1>
+  <div id="note">BU KENDİNE VERDİĞİN SÖZ. VAZGEÇME!</div>
+  <div id="counter">Bugün içilen sigara: <span id="count">0</span></div>
+  <button id="smokeBtn">🚬 Sigara İçtim</button>
+  <div id="history">
+    <h3>Son 7 Gün</h3>
+    <ul id="historyList"></ul>
+  </div>
+
+  <script>
+    const btn = document.getElementById("smokeBtn");
+    const countEl = document.getElementById("count");
+    const historyList = document.getElementById("historyList");
+    const today = new Date().toISOString().slice(0, 10);
+
+    function getData() {
+      return JSON.parse(localStorage.getItem("smoke_log") || "{}");
+    }
+
+    function saveData(data) {
+      localStorage.setItem("smoke_log", JSON.stringify(data));
+    }
+
+    function updateUI() {
+      const data = getData();
+      const todayData = data[today] || { count: 0, times: [] };
+      countEl.textContent = todayData.count;
+
+      const dates = Object.keys(data).sort().reverse().slice(0, 7);
+      historyList.innerHTML = "";
+      dates.forEach(date => {
+        const item = document.createElement("li");
+        item.innerHTML = `<strong>${date}</strong>: ${data[date].count} adet<br><small>${data[date].times.join("<br>")}</small>`;
+        historyList.appendChild(item);
+      });
+    }
+
+    btn.addEventListener("click", () => {
+      const data = getData();
+      if (!data[today]) data[today] = { count: 0, times: [] };
+      data[today].count += 1;
+      data[today].times.push(new Date().toLocaleString());
+      saveData(data);
+      updateUI();
+    });
+
+    updateUI();
+  </script>
+</body>
+</html>
