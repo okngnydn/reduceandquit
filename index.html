@@ -3,178 +3,127 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Reduce & Quit Smoking</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Reduce & Quit</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #fdfdfd;
-      padding: 20px;
-      max-width: 600px;
-      margin: auto;
+      text-align: center;
+      padding: 1rem;
+      background: #f4f4f4;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 0.2em;
     }
     #note {
-      background: #ffdddd;
-      padding: 15px;
-      font-weight: bold;
-      border-left: 5px solid red;
-      margin-bottom: 20px;
-    }
-    #counter, #timer, #maxTime {
-      font-size: 18px;
-      margin: 10px 0;
+      font-size: 1.2em;
+      color: darkred;
+      margin-bottom: 1em;
     }
     button {
-      padding: 15px;
-      font-size: 18px;
-      background-color: #ff4444;
-      color: white;
+      padding: 1em;
+      font-size: 1em;
+      margin: 1em 0.5em;
       border: none;
-      border-radius: 8px;
+      border-radius: 5px;
       cursor: pointer;
-      margin-top: 10px;
-      width: 100%;
     }
-    button:active {
-      background-color: #cc0000;
+    #smokeBtn {
+      background-color: #e74c3c;
+      color: white;
     }
     #resetBtn {
-      background-color: #666;
-      margin-top: 20px;
+      background-color: #ccc;
+      color: black;
     }
-    #history {
-      margin-top: 30px;
-      background: #f2f2f2;
-      padding: 15px;
-      border-radius: 5px;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      border-bottom: 1px solid #ccc;
-      padding: 10px 0;
+    #log, #timer {
+      margin-top: 1em;
+      font-weight: bold;
     }
     canvas {
+      margin-top: 2em;
       max-width: 100%;
     }
   </style>
 </head>
 <body>
-  <h1>Reduce & Quit</h1>
-  <div id="note">You promised yourself this time. DO NOT GIVE UP.</div>
 
-  <div id="timer">Time since last cigarette: <span id="noSmokeTime">00:00:00</span></div>
-  <div id="maxTime">Longest smoke-free time: <span id="longestTime">00:00:00</span></div>
-  <div id="counter">Today's cigarette count: <span id="count">0</span></div>
+  <h1>🚭 Reduce & Quit</h1>
+  <div id="note">Remember why you started. Don't let a moment of weakness erase your progress.</div>
 
   <button id="smokeBtn">🚬 I Smoked</button>
+  <div id="timer">Time since last cigarette: 0d 0h 0m 0s</div>
+  <div id="log">Today's cigarettes: 0</div>
+  <canvas id="chart" width="300" height="150"></canvas>
   <button id="resetBtn">🔁 Reset All Data</button>
 
-  <div id="history">
-    <h3>Past 7 Days</h3>
-    <ul id="historyList"></ul>
-    <canvas id="barChart" height="200"></canvas>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const countEl = document.getElementById("count");
-    const historyList = document.getElementById("historyList");
     const smokeBtn = document.getElementById("smokeBtn");
     const resetBtn = document.getElementById("resetBtn");
-    const noSmokeEl = document.getElementById("noSmokeTime");
-    const longestEl = document.getElementById("longestTime");
-    const today = new Date().toISOString().slice(0, 10);
+    const log = document.getElementById("log");
+    const timer = document.getElementById("timer");
 
-    function getData() {
-      return JSON.parse(localStorage.getItem("smoke_log") || "{}");
-    }
+    let logData = JSON.parse(localStorage.getItem("smoke_log")) || [];
+    let lastSmoke = localStorage.getItem("last_smoke");
 
-    function saveData(data) {
-      localStorage.setItem("smoke_log", JSON.stringify(data));
-    }
+    function updateTimer() {
+      if (!lastSmoke) {
+        timer.textContent = "Time since last cigarette: -";
+        return;
+      }
 
-    function getLongestSmokeFree() {
-      return parseInt(localStorage.getItem("longest_free") || "0");
-    }
+      const now = new Date();
+      const diff = now - new Date(lastSmoke);
+      const seconds = Math.floor(diff / 1000);
+      const d = Math.floor(seconds / (3600 * 24));
+      const h = Math.floor((seconds % (3600 * 24)) / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = seconds % 60;
 
-    function saveLongestSmokeFree(ms) {
-      localStorage.setItem("longest_free", ms.toString());
-    }
-
-    function formatTime(ms) {
-      const h = String(Math.floor(ms / 3600000)).padStart(2, '0');
-      const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');
-      const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
-      return `${h}:${m}:${s}`;
+      timer.textContent = `Time since last cigarette: ${d}d ${h}h ${m}m ${s}s`;
     }
 
     function updateUI() {
-      const data = getData();
-      const todayData = data[today] || { count: 0, times: [] };
-      countEl.textContent = todayData.count;
-      historyList.innerHTML = "";
-      const dates = [];
-      const counts = [];
-      const now = new Date();
+      const today = new Date().toISOString().split("T")[0];
+      const todayCount = logData.filter(e => e.startsWith(today)).length;
+      log.textContent = `Today's cigarettes: ${todayCount}`;
+      updateChart();
+    }
 
+    function updateChart() {
+      const counts = {};
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        const dateStr = d.toISOString().slice(0, 10);
-        const entry = data[dateStr] || { count: 0, times: [] };
-        dates.push(dateStr);
-        counts.push(entry.count);
-
-        const li = document.createElement("li");
-        li.innerHTML = `<strong>${dateStr}</strong>: ${entry.count} cigarette(s)<br><small>${entry.times.join("<br>")}</small>`;
-        historyList.appendChild(li);
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const key = date.toISOString().split("T")[0];
+        counts[key] = 0;
+      }
+      for (const entry of logData) {
+        const day = entry.split("T")[0];
+        if (day in counts) counts[day]++;
       }
 
-      renderChart(dates, counts);
-    }
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
 
-    function updateTimer() {
-      const lastTimeStr = localStorage.getItem("last_smoke");
-      const now = new Date();
-      if (!lastTimeStr) {
-        noSmokeEl.textContent = "00:00:00";
-        longestEl.textContent = formatTime(getLongestSmokeFree());
-        return;
-      }
-      const lastTime = new Date(lastTimeStr);
-      const diff = now - lastTime;
-      noSmokeEl.textContent = formatTime(diff);
-
-      if (diff > getLongestSmokeFree()) {
-        saveLongestSmokeFree(diff);
-        longestEl.textContent = formatTime(diff);
-      } else {
-        longestEl.textContent = formatTime(getLongestSmokeFree());
-      }
-    }
-
-    function renderChart(dates, counts) {
-      const ctx = document.getElementById('barChart').getContext('2d');
-      if (window.barChart) window.barChart.destroy();
-      window.barChart = new Chart(ctx, {
-        type: 'bar',
+      if (window.myChart) window.myChart.destroy();
+      const ctx = document.getElementById("chart").getContext("2d");
+      window.myChart = new Chart(ctx, {
+        type: "bar",
         data: {
-          labels: dates,
+          labels,
           datasets: [{
-            label: 'Cigarettes per Day',
-            data: counts,
-            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            label: "Cigarettes per Day",
+            data: values,
+            backgroundColor: "#e67e22"
           }]
         },
         options: {
           scales: {
             y: {
               beginAtZero: true,
-              ticks: {
-                stepSize: 1
-              }
+              suggestedMax: 10
             }
           }
         }
@@ -182,23 +131,20 @@
     }
 
     smokeBtn.addEventListener("click", () => {
-      const data = getData();
-      if (!data[today]) data[today] = { count: 0, times: [] };
-      data[today].count += 1;
-      const now = new Date();
-      data[today].times.push(now.toLocaleString());
-      saveData(data);
-      localStorage.setItem("last_smoke", now.toISOString());
+      const now = new Date().toISOString();
+      logData.push(now);
+      localStorage.setItem("smoke_log", JSON.stringify(logData));
+      localStorage.setItem("last_smoke", now);
+      lastSmoke = now;
       updateUI();
-      updateTimer();
     });
 
     resetBtn.addEventListener("click", () => {
-      const confirmReset = confirm("This will erase all your smoking history. Are you sure?");
-      if (confirmReset) {
+      if (confirm("This will erase all your smoking history. Are you sure?")) {
         localStorage.removeItem("smoke_log");
         localStorage.removeItem("last_smoke");
-        localStorage.removeItem("longest_free");
+        logData = [];
+        lastSmoke = null;
         updateUI();
         updateTimer();
         alert("All data has been reset.");
