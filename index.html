@@ -1,225 +1,266 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Reduce & Quit Smoking Tracker</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f7f8fa;
-      color: #222;
-    }
-    header {
-      background: #2b6777;
-      color: #fff;
-      padding: 20px;
-      text-align: center;
-    }
-    h1 {
-      margin: 0;
-      font-size: 24px;
-    }
-    nav {
-      display: flex;
-      justify-content: space-around;
-      background: #c8d8e4;
-      padding: 10px 0;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Smoke & Medicine Tracker</title>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0; padding: 0; background: #f9f9f9; color: #222;
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    background: #4a90e2;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.5rem;
+    user-select:none;
+  }
+  nav {
+    display: flex;
+    background: #2c6cd1;
+  }
+  nav button {
+    flex: 1;
+    background: #2c6cd1;
+    border: none;
+    color: white;
+    padding: 0.8rem 0;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    user-select:none;
+  }
+  nav button:hover {
+    background: #1853a1;
+  }
+  nav button.active {
+    background: white;
+    color: #2c6cd1;
+    font-weight: 700;
+  }
+  main {
+    flex: 1;
+    padding: 1rem;
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    box-shadow: 0 2px 10px rgb(0 0 0 / 0.1);
+    border-radius: 8px;
+  }
+  h2 {
+    margin-top: 0;
+    color: #2c6cd1;
+  }
+  button {
+    background: #4a90e2;
+    border: none;
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0.5rem 0 1rem 0;
+    user-select:none;
+  }
+  button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    text-align: center;
+  }
+  th {
+    background: #f0f8ff;
+    color: #2c6cd1;
+  }
+  .counter {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+  .timer {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: #555;
+  }
+  .info-box {
+    background: #e7f0fe;
+    border-left: 5px solid #4a90e2;
+    padding: 0.8rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  /* Responsive */
+  @media (max-width: 650px) {
+    main {
+      margin: 0.5rem;
+      padding: 1rem;
     }
     nav button {
-      background: none;
-      border: none;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
-      color: #2b6777;
+      font-size: 0.85rem;
+      padding: 0.6rem 0;
     }
-    section {
-      display: none;
-      padding: 20px;
-    }
-    section.active {
-      display: block;
-    }
-    .timer, .counter {
-      font-size: 20px;
-      margin: 10px 0;
-    }
-    button.action {
-      background: #52ab98;
-      border: none;
-      color: white;
-      padding: 10px 20px;
-      margin-top: 10px;
-      font-size: 16px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button.reset {
-      background: #f24c4c;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: #fff;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: #eee;
-    }
-    canvas {
-      max-width: 100%;
-      margin-top: 20px;
-    }
-    .note {
-      background: #ffe5b4;
-      padding: 15px;
-      border-left: 5px solid #f24c4c;
-      margin-top: 10px;
-    }
-  </style>
+  }
+  /* Chart.js container */
+  #chartContainer {
+    margin-top: 1rem;
+  }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Reduce & Quit</h1>
-    <div class="timer" id="timer">Smoke-free time: 00d 00h 00m 00s</div>
-  </header>
-
-  <nav>
-    <button onclick="showSection('tracker')">Tracker</button>
-    <button onclick="showSection('history')">History</button>
-    <button onclick="showSection('plan')">Plan</button>
-    <button onclick="showSection('settings')">Settings</button>
-  </nav>
-
-  <section id="tracker" class="active">
-    <div class="counter" id="dailyCount">Today's cigarettes: 0</div>
-    <button class="action" onclick="logCigarette()">I smoked</button>
-    <div class="note">🧠 Remember why you started. One moment of weakness is not worth starting over.</div>
+<header>Smoke & Medicine Tracker</header>
+<nav>
+  <button class="tab-btn active" data-tab="tracker">Tracker</button>
+  <button class="tab-btn" data-tab="history">History</button>
+  <button class="tab-btn" data-tab="plan">Plan</button>
+  <button class="tab-btn" data-tab="settings">Settings</button>
+  <button class="tab-btn" data-tab="medicine">Medicine</button>
+</nav>
+<main>
+  <!-- Tracker Tab -->
+  <section id="tracker" class="tab-content">
+    <h2>Smoke Tracker</h2>
+    <div class="counter" id="smokeCount">0</div>
+    <div class="timer" id="smokeTimer">Time since last cigarette: 0m 0s</div>
+    <button id="smokeBtn">I smoked a cigarette</button>
+    <button id="resetSmokeBtn" style="background:#e04b4b;">Reset Smoke Data</button>
   </section>
-
-  <section id="history">
-    <table id="historyTable">
+  <!-- History Tab -->
+  <section id="history" class="tab-content" style="display:none;">
+    <h2>Smoking History</h2>
+    <table>
       <thead>
-        <tr><th>Date</th><th>Time</th></tr>
+        <tr><th>Date</th><th>Time</th><th>Cigarettes Smoked</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="smokeHistoryTableBody"></tbody>
     </table>
-    <canvas id="weekChart" height="100"></canvas>
+    <h2 style="margin-top:2rem;">Medicine History</h2>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Chantix Taken</th></tr>
+      </thead>
+      <tbody id="medicineHistoryTableBody"></tbody>
+    </table>
   </section>
-
-  <section id="plan">
-    <h2>Gradual Reduction Plan</h2>
-    <ul>
-      <li>🔹 Month 1: Max 10 cigarettes/day</li>
-      <li>🔹 Month 2: Max 5 cigarettes/day</li>
-      <li>🔹 Month 3: Max 1-2 cigarettes/day</li>
-      <li>✅ Goal: 0 by end of Month 3</li>
-    </ul>
+  <!-- Plan Tab -->
+  <section id="plan" class="tab-content" style="display:none;">
+    <h2>Reduction Plan</h2>
+    <div class="info-box">
+      <ul>
+        <li>Start: 20 cigarettes/day</li>
+        <li>After 1 month: reduce to 10/day</li>
+        <li>After 2 months: reduce to 5/day</li>
+        <li>After 3 months: reduce to 1-2/day</li>
+      </ul>
+    </div>
+    <div class="info-box" style="margin-top:1rem;">
+      <strong>Tips to stay on track:</strong>
+      <ul>
+        <li>Track each cigarette and Chantix intake carefully</li>
+        <li>Use the timer to monitor time since last cigarette</li>
+        <li>Reset data only if needed to avoid losing progress</li>
+        <li>Stay motivated and review your progress in History and Graph tabs</li>
+      </ul>
+    </div>
   </section>
-
-  <section id="settings">
-    <button class="action reset" onclick="resetData()">Reset All Data</button>
+  <!-- Settings Tab -->
+  <section id="settings" class="tab-content" style="display:none;">
+    <h2>Settings</h2>
+    <p>Coming soon...</p>
   </section>
+  <!-- Medicine Tab -->
+  <section id="medicine" class="tab-content" style="display:none;">
+    <h2>Medicine Tracker (Chantix)</h2>
+    <div class="counter" id="medicineCount">0</div>
+    <button id="medicineBtn" style="background:#4a90e2;">I took my medicine</button>
+    <button id="resetMedicineBtn" style="background:#e04b4b;">Reset Medicine Data</button>
+    <table style="margin-top:1rem;">
+      <thead>
+        <tr><th>Date</th><th>Time</th><th>Tablets Taken</th></tr>
+      </thead>
+      <tbody id="medicineLogTableBody"></tbody>
+    </table>
+  </section>
+</main>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    let timerStart = localStorage.getItem("lastSmoke") || new Date().toISOString();
-    let countToday = 0;
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(() => {
+  // Tabs management
+  const tabs = document.querySelectorAll('.tab-btn');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      contents.forEach(c => c.style.display = 'none');
+      const target = document.getElementById(tab.dataset.tab);
+      if (target) target.style.display = 'block';
+    });
+  });
 
-    function updateTimer() {
-      const lastSmoke = new Date(localStorage.getItem("lastSmoke") || new Date());
-      const now = new Date();
-      const diff = Math.floor((now - lastSmoke) / 1000);
-      const days = Math.floor(diff / 86400);
-      const hours = Math.floor((diff % 86400) / 3600);
-      const minutes = Math.floor((diff % 3600) / 60);
-      const seconds = diff % 60;
-      document.getElementById("timer").innerText =
-        `Smoke-free time: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+  // STORAGE KEYS
+  const SMOKE_LOG_KEY = 'smokeLog';
+  const MEDICINE_LOG_KEY = 'medicineLog';
+
+  // Utilities
+  function formatDate(d) {
+    return d.toLocaleDateString();
+  }
+  function formatTime(d) {
+    return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+
+  // Load logs or initialize
+  let smokeLog = JSON.parse(localStorage.getItem(SMOKE_LOG_KEY)) || [];
+  let medicineLog = JSON.parse(localStorage.getItem(MEDICINE_LOG_KEY)) || [];
+
+  // Elements
+  const smokeCountElem = document.getElementById('smokeCount');
+  const smokeTimerElem = document.getElementById('smokeTimer');
+  const smokeBtn = document.getElementById('smokeBtn');
+  const resetSmokeBtn = document.getElementById('resetSmokeBtn');
+  const smokeHistoryBody = document.getElementById('smokeHistoryTableBody');
+
+  const medicineCountElem = document.getElementById('medicineCount');
+  const medicineBtn = document.getElementById('medicineBtn');
+  const resetMedicineBtn = document.getElementById('resetMedicineBtn');
+  const medicineLogBody = document.getElementById('medicineLogTableBody');
+
+  // --- SMOKE TRACKER ---
+
+  // Update smoke count and timer
+  function updateSmokeCounter() {
+    const total = smokeLog.length;
+    smokeCountElem.textContent = total;
+
+    if (total === 0) {
+      smokeTimerElem.textContent = 'Time since last cigarette: N/A';
+      return;
     }
+    const lastDate = new Date(smokeLog[smokeLog.length -1].timestamp);
+    const diffMs = Date.now() - lastDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffSecs = Math.floor((diffMs % 60000) / 1000);
+    smokeTimerElem.textContent = `Time since last cigarette: ${diffMins}m ${diffSecs}s`;
+  }
 
-    function logCigarette() {
-      const now = new Date();
-      localStorage.setItem("lastSmoke", now.toISOString());
-      const history = JSON.parse(localStorage.getItem("history") || "[]");
-      history.push({ date: now.toLocaleDateString(), time: now.toLocaleTimeString() });
-      localStorage.setItem("history", JSON.stringify(history));
-      updateHistory();
-      updateChart();
-    }
-
-    function updateHistory() {
-      const history = JSON.parse(localStorage.getItem("history") || "[]");
-      const tbody = document.querySelector("#historyTable tbody");
-      tbody.innerHTML = "";
-      countToday = 0;
-      const today = new Date().toLocaleDateString();
-      history.forEach(item => {
-        if (item.date === today) countToday++;
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${item.date}</td><td>${item.time}</td>`;
-        tbody.appendChild(row);
-      });
-      document.getElementById("dailyCount").innerText = `Today's cigarettes: ${countToday}`;
-    }
-
-    function resetData() {
-      if (confirm("Reset all data?")) {
-        localStorage.clear();
-        location.reload();
-      }
-    }
-
-    function showSection(id) {
-      document.querySelectorAll("section").forEach(sec => sec.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-    }
-
-    function updateChart() {
-      const history = JSON.parse(localStorage.getItem("history") || "[]");
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      const counts = Array(7).fill(0);
-      const now = new Date();
-      history.forEach(item => {
-        const date = new Date(`${item.date} ${item.time}`);
-        const diff = (now - date) / (1000 * 60 * 60 * 24);
-        if (diff <= 7) {
-          counts[date.getDay()]++;
-        }
-      });
-      if (window.barChart) window.barChart.destroy();
-      const ctx = document.getElementById("weekChart").getContext("2d");
-      window.barChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: days,
-          datasets: [{
-            label: "Cigarettes/day",
-            data: counts,
-            backgroundColor: "#2b6777"
-          }]
-        },
-        options: {
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    setInterval(updateTimer, 1000);
-    updateTimer();
-    updateHistory();
-    updateChart();
-  </script>
-</body>
-</html>
+  // Render smoke history table grouped by date
+  function renderSmokeHistory() {
+    if (smokeLog.length === 0) {
+      smokeHistoryBody.innerHTML = '<tr><td colspan="3">No records found.</td></
