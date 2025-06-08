@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Reduce and Quit</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -85,6 +86,7 @@
   <div class="counter">Time since last cigarette: <span id="timeSince">00:00:00</span></div>
   <button class="action" onclick="logCigarette()">I Smoked</button>
   <p>Today's cigarette count: <span id="dailyCount">0</span></p>
+  <canvas id="weeklyChart" height="200"></canvas>
 </section>
 
 <section id="history">
@@ -99,7 +101,7 @@
   <ul>
     <li>Month 1: Maximum 10 cigarettes/day</li>
     <li>Month 2: Maximum 5 cigarettes/day</li>
-    <li>Month 3: Maximum 1-2 cigarettes/day</li>
+    <li>Month 3: Maximum 1–2 cigarettes/day</li>
   </ul>
 </section>
 
@@ -118,8 +120,8 @@
 </section>
 
 <script>
-  // Initial Setup
   let data = JSON.parse(localStorage.getItem('smokeData')) || { cigs: [], medicine: [] };
+  let chart;
 
   function saveData() {
     localStorage.setItem('smokeData', JSON.stringify(data));
@@ -156,12 +158,18 @@
   }
 
   function updateUI() {
-    // Cigarette Count
-    const today = new Date().toISOString().split('T')[0];
-    const todayCigs = data.cigs.filter(t => t.startsWith(today));
+    const now = new Date();
+    const today = now.getFullYear() + '-' + 
+                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                  String(now.getDate()).padStart(2, '0');
+    const todayCigs = data.cigs.filter(t => {
+      const dt = new Date(t);
+      return dt.getFullYear() === now.getFullYear() &&
+             dt.getMonth() === now.getMonth() &&
+             dt.getDate() === now.getDate();
+    });
     document.getElementById('dailyCount').textContent = todayCigs.length;
 
-    // History Table
     const histTable = document.getElementById('historyTable');
     histTable.innerHTML = "<tr><th>Date</th><th>Time</th></tr>";
     data.cigs.slice().reverse().forEach(t => {
@@ -169,7 +177,6 @@
       histTable.innerHTML += `<tr><td>${dt.toLocaleDateString()}</td><td>${dt.toLocaleTimeString()}</td></tr>`;
     });
 
-    // Medicine Table
     const medTable = document.getElementById('medicineTable');
     medTable.innerHTML = "<tr><th>Date</th><th>Time</th></tr>";
     document.getElementById('medicineCount').textContent = data.medicine.length;
@@ -177,19 +184,50 @@
       const dt = new Date(t);
       medTable.innerHTML += `<tr><td>${dt.toLocaleDateString()}</td><td>${dt.toLocaleTimeString()}</td></tr>`;
     });
+
+    updateChart();
   }
 
-  // Timer Since Last Cigarette
   function updateTimer() {
     const last = data.cigs.length > 0 ? new Date(data.cigs[data.cigs.length - 1]) : null;
     const now = new Date();
     let diff = last ? Math.floor((now - last) / 1000) : 0;
-
     let h = Math.floor(diff / 3600).toString().padStart(2, '0');
     let m = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
     let s = (diff % 60).toString().padStart(2, '0');
-
     document.getElementById('timeSince').textContent = `${h}:${m}:${s}`;
+  }
+
+  function updateChart() {
+    const last7 = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const label = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const count = data.cigs.filter(t => {
+        const dt = new Date(t);
+        return dt.toDateString() === d.toDateString();
+      }).length;
+      return { label, count };
+    });
+
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: last7.map(e => e.label),
+        datasets: [{
+          label: 'Cigarettes',
+          data: last7.map(e => e.count),
+          backgroundColor: '#ff9900'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
   }
 
   setInterval(updateTimer, 1000);
